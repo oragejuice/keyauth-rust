@@ -11,15 +11,17 @@ auth.login("username", "password", Some("hwid".to_string()).unwrap()); // if you
 also if you want to use an obfuscator for rust i recommend using [obfstr](https://crates.io/crates/obfstr) and [llvm obfuscator](https://github.com/eshard/obfuscator-llvm/wiki/Rust-obfuscation-guide)
 */
 
+use machineid_rs::IdBuilder;
 use serde::Deserialize;
 use uuid::Uuid;
-use wmi::COMLibrary;
-use wmi::WMIConnection;
 use std::collections::HashMap;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use hmac_sha256::HMAC;
 use base16::decode;
+use machineid_rs::{IdBuilder, Encryption};
+use machineid_rs::HWIDComponent;
+
 
 /// every function in this struct (accept log) returns a Result and Err("Request was tampered with") will be returned if the request signature doesnt mathc the sha256 hmac of the message
 #[derive(Debug, Clone)]
@@ -51,61 +53,14 @@ pub struct KeyauthApi {
     pub response: String,
 }
 
+fn get_hwid() -> String {
+    let mut builder = IdBuilder::new(Encryption::SHA256);
+    builder
+        .add_component(HWIDComponent::SystemID)
+        .add_component(HWIDComponent::CPUCores)
+        .add_component(HWIDComponent::DriveSerial);
 
-#[derive(Deserialize, Debug)]
-struct Win32_ComputerSystemProduct {
-    #[serde(rename = "UUID")]
-    uuid: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct Win32_BaseBoard {
-    #[serde(rename = "SerialNumber")]
-    serial_number: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct Win32_BIOS {
-    #[serde(rename = "SerialNumber")]
-    serial_number: String,
-}
-
-pub fn get_hardware_id() -> Option<String> {
-    let com_con = COMLibrary::new().ok()?;
-    let wmi_con = WMIConnection::new(com_con.into()).ok()?;
-
-    // Try System UUID
-    if let Ok(results) = wmi_con.query::<Win32_ComputerSystemProduct>() {
-        if let Some(system) = results.first() {
-            let uuid = system.uuid.trim();
-            if !uuid.is_empty() && uuid != "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF" && uuid != "00000000-0000-0000-0000-000000000000" {
-                return Some(uuid.to_string());
-            }
-        }
-    }
-
-    // Try Motherboard Serial Number
-    if let Ok(results) = wmi_con.query::<Win32_BaseBoard>() {
-        if let Some(board) = results.first() {
-            let serial = board.serial_number.trim();
-            if !serial.is_empty() {
-                return Some(serial.to_string());
-            }
-        }
-    }
-
-    // Try BIOS Serial Number
-    if let Ok(results) = wmi_con.query::<Win32_BIOS>() {
-        if let Some(bios) = results.first() {
-            let serial = bios.serial_number.trim();
-            if !serial.is_empty() {
-                return Some(serial.to_string());
-            }
-        }
-    }
-
-    // All attempts failed
-    None
+    builder.build("mykey").unwrap()
 }
 
 impl KeyauthApi {
@@ -213,7 +168,7 @@ impl KeyauthApi {
     pub fn register(&mut self, username: String, password: String, license: String, hwid: Option<String>) -> Result<(), String> {
         let hwidd = match hwid {
             Some(hwid) => hwid,
-            None => get_hardware_id().unwrap(),
+            None => get_hwid(),
         };
         let mut req_data = HashMap::new();
         req_data.insert("type", "register");
@@ -312,7 +267,7 @@ impl KeyauthApi {
     pub fn login(&mut self, username: String, password: String, hwid: Option<String>) -> Result<(), String> {
         let hwidd = match hwid {
             Some(hwid) => hwid,
-            None => get_hardware_id().unwrap(),
+            None => get_hwid(),
         };
 
         let mut req_data = HashMap::new();
@@ -370,7 +325,7 @@ impl KeyauthApi {
     pub fn license(&mut self, license: String, hwid: Option<String>) -> Result<(), String> {
         let hwidd = match hwid {
             Some(hwid) => hwid,
-            None => get_hardware_id().unwrap(),
+            None => get_hwid(),
         };
 
         let mut req_data = HashMap::new();
