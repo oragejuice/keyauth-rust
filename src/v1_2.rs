@@ -36,7 +36,7 @@ pub struct KeyauthApi {
     pub customer_panel_link: String,
     pub username: String,
     pub ip: String,
-    pub hwid: String,
+    pub hwid: Option<String>,
     pub create_date: String,
     pub last_login: String,
     pub subscription: String,
@@ -67,7 +67,7 @@ impl KeyauthApi {
             customer_panel_link: String::new(),
             username: String::new(),
             ip: String::new(),
-            hwid: machine_uuid::get(),
+            hwid: None,
             create_date: String::new(),
             last_login: String::new(),
             subscription: String::new(),
@@ -294,7 +294,7 @@ impl KeyauthApi {
         if json_rep["success"].as_bool().unwrap() {
             self.username = username;
             self.ip = json_rep["info"]["ip"].as_str().unwrap().to_string();
-            self.hwid = hwidd;
+            self.hwid = Some(hwidd);
             self.create_date = json_rep["info"]["createdate"].as_str().unwrap().to_string();
             self.last_login = json_rep["info"]["lastlogin"].as_str().unwrap().to_string();
             self.subscription = json_rep["info"]["subscriptions"][0]["subscription"].as_str().unwrap().to_string();
@@ -351,7 +351,7 @@ impl KeyauthApi {
         if json_rep["success"].as_bool().unwrap() {
             self.username = json_rep["info"]["username"].as_str().unwrap().to_string();
             self.ip = json_rep["info"]["ip"].as_str().unwrap().to_string();
-            self.hwid = hwidd;
+            self.hwid = Some(hwidd);
             self.create_date = json_rep["info"]["createdate"].as_str().unwrap().to_string();
             self.last_login = json_rep["info"]["lastlogin"].as_str().unwrap().to_string();
             self.subscription = json_rep["info"]["subscriptions"][0]["subscription"].as_str().unwrap().to_string();
