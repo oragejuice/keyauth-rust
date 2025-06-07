@@ -11,7 +11,6 @@ auth.login("username", "password", Some("hwid".to_string()).unwrap()); // if you
 also if you want to use an obfuscator for rust i recommend using [obfstr](https://crates.io/crates/obfstr) and [llvm obfuscator](https://github.com/eshard/obfuscator-llvm/wiki/Rust-obfuscation-guide)
 */
 
-use machineid_rs::IdBuilder;
 use serde::Deserialize;
 use uuid::Uuid;
 use std::collections::HashMap;
