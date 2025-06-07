@@ -56,8 +56,7 @@ fn get_hwid() -> String {
     let mut builder = IdBuilder::new(Encryption::SHA256);
     builder
         .add_component(HWIDComponent::SystemID)
-        .add_component(HWIDComponent::CPUCores)
-        .add_component(HWIDComponent::DriveSerial);
+        .add_component(HWIDComponent::CPUCores);
 
     builder.build("mykey").unwrap()
 }
