@@ -11,7 +11,10 @@ auth.login("username", "password", Some("hwid".to_string()).unwrap()); // if you
 also if you want to use an obfuscator for rust i recommend using [obfstr](https://crates.io/crates/obfstr) and [llvm obfuscator](https://github.com/eshard/obfuscator-llvm/wiki/Rust-obfuscation-guide)
 */
 
+use serde::Deserialize;
 use uuid::Uuid;
+use wmi::COMLibrary;
+use wmi::WMIConnection;
 use std::collections::HashMap;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -46,6 +49,22 @@ pub struct KeyauthApi {
     pub success: bool,
     pub blacklisted: bool,
     pub response: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct Win32_ComputerSystemProduct {
+    #[serde(rename = "UUID")]
+    uuid: String,
+}
+
+pub fn get_hardware_id() -> Option<String> {
+    // Initialize COM Library
+    let com_con = COMLibrary::new().ok()?;
+    let wmi_con = WMIConnection::new(com_con.into()).ok()?;
+
+    // Query WMI for UUID
+    let results: Vec<Win32_ComputerSystemProduct> = wmi_con.query().ok()?;
+    results.first().map(|system| system.uuid.clone())
 }
 
 impl KeyauthApi {
@@ -153,7 +172,7 @@ impl KeyauthApi {
     pub fn register(&mut self, username: String, password: String, license: String, hwid: Option<String>) -> Result<(), String> {
         let hwidd = match hwid {
             Some(hwid) => hwid,
-            None => machine_uuid::get(),
+            None => get_hardware_id().unwrap(),
         };
         let mut req_data = HashMap::new();
         req_data.insert("type", "register");
@@ -252,7 +271,7 @@ impl KeyauthApi {
     pub fn login(&mut self, username: String, password: String, hwid: Option<String>) -> Result<(), String> {
         let hwidd = match hwid {
             Some(hwid) => hwid,
-            None => machine_uuid::get(),
+            None => get_hardware_id().unwrap(),
         };
 
         let mut req_data = HashMap::new();
@@ -310,7 +329,7 @@ impl KeyauthApi {
     pub fn license(&mut self, license: String, hwid: Option<String>) -> Result<(), String> {
         let hwidd = match hwid {
             Some(hwid) => hwid,
-            None => machine_uuid::get(),
+            None => get_hardware_id().unwrap(),
         };
 
         let mut req_data = HashMap::new();
