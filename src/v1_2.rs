@@ -51,20 +51,61 @@ pub struct KeyauthApi {
     pub response: String,
 }
 
+
 #[derive(Deserialize, Debug)]
 struct Win32_ComputerSystemProduct {
     #[serde(rename = "UUID")]
     uuid: String,
 }
 
+#[derive(Deserialize, Debug)]
+struct Win32_BaseBoard {
+    #[serde(rename = "SerialNumber")]
+    serial_number: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct Win32_BIOS {
+    #[serde(rename = "SerialNumber")]
+    serial_number: String,
+}
+
 pub fn get_hardware_id() -> Option<String> {
-    // Initialize COM Library
     let com_con = COMLibrary::new().ok()?;
     let wmi_con = WMIConnection::new(com_con.into()).ok()?;
 
-    // Query WMI for UUID
-    let results: Vec<Win32_ComputerSystemProduct> = wmi_con.query().ok()?;
-    results.first().map(|system| system.uuid.clone())
+    // Try System UUID
+    if let Ok(results) = wmi_con.query::<Win32_ComputerSystemProduct>() {
+        if let Some(system) = results.first() {
+            let uuid = system.uuid.trim();
+            if !uuid.is_empty() && uuid != "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF" && uuid != "00000000-0000-0000-0000-000000000000" {
+                return Some(uuid.to_string());
+            }
+        }
+    }
+
+    // Try Motherboard Serial Number
+    if let Ok(results) = wmi_con.query::<Win32_BaseBoard>() {
+        if let Some(board) = results.first() {
+            let serial = board.serial_number.trim();
+            if !serial.is_empty() {
+                return Some(serial.to_string());
+            }
+        }
+    }
+
+    // Try BIOS Serial Number
+    if let Ok(results) = wmi_con.query::<Win32_BIOS>() {
+        if let Some(bios) = results.first() {
+            let serial = bios.serial_number.trim();
+            if !serial.is_empty() {
+                return Some(serial.to_string());
+            }
+        }
+    }
+
+    // All attempts failed
+    None
 }
 
 impl KeyauthApi {
